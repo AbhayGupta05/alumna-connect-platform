@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
 
     try {
-      const data = await apiCall('/auth/login', {
+      const data = await apiCall('/api/login', {
         method: 'POST',
         body: JSON.stringify(credentials),
       });
@@ -157,13 +157,17 @@ export const AuthProvider = ({ children }) => {
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
           payload: {
             user: data.user,
-            userType: data.user_type,
+            userType: data.user.role,
             institution: data.institution,
           },
         });
-        return { success: true };
+        return { 
+          success: true, 
+          redirectTo: data.redirect_to,
+          permissions: data.permissions 
+        };
       } else {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.error || 'Login failed');
       }
     } catch (error) {
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: error.message });

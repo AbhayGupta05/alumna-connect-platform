@@ -280,11 +280,13 @@ def force_init_database():
             'database_initialized': db_initialized
         }, 500
 
-@app.route('/test-login', methods=['POST'])
-def test_login():
-    """Simple test login endpoint"""
+@app.route('/api/login', methods=['POST'])
+def login():
+    """Universal login endpoint for all user types"""
     try:
+        from flask import request, session
         data = request.get_json()
+        
         email = data.get('email')
         password = data.get('password')
         
@@ -297,10 +299,25 @@ def test_login():
             user = User.query.filter_by(email=email).first()
             
             if not user:
-                return {'success': False, 'error': 'User not found'}, 404
+                return {'success': False, 'error': 'Invalid credentials'}, 401
             
             if not user.check_password(password):
-                return {'success': False, 'error': 'Invalid password'}, 401
+                return {'success': False, 'error': 'Invalid credentials'}, 401
+            
+            if user.status.value != 'active':
+                return {'success': False, 'error': 'Account is not active'}, 403
+            
+            # Store user session
+            session['user_id'] = user.id
+            session['user_role'] = user.role.value
+            
+            # Determine dashboard route based on role
+            dashboard_routes = {
+                'super_admin': '/super-admin/dashboard',
+                'admin': '/admin/dashboard', 
+                'alumni': '/alumni/dashboard',
+                'student': '/student/dashboard'
+            }
             
             return {
                 'success': True,
@@ -308,15 +325,267 @@ def test_login():
                     'id': user.id,
                     'email': user.email,
                     'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
                     'role': user.role.value,
-                    'status': user.status.value
-                }
+                    'status': user.status.value,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
+                },
+                'redirect_to': dashboard_routes.get(user.role.value, '/dashboard'),
+                'permissions': get_user_permissions(user.role.value)
             }
             
     except Exception as e:
-        return {'success': False, 'error': str(e)}, 500
+        import traceback
+        print(f"Login error: {e}")
+        traceback.print_exc()
+        return {'success': False, 'error': 'Login failed'}, 500
 
-@app.route('/alumni-claim/colleges')
+def get_user_permissions(role):
+    """Return permissions based on user role"""
+    permissions = {
+        'super_admin': {
+            'can_manage_institutions': True,
+            'can_create_users': True,
+            'can_manage_all_users': True,
+            'can_view_analytics': True,
+            'can_manage_system_settings': True,
+            'can_delete_users': True,
+            'can_manage_roles': True
+        },
+        'admin': {
+            'can_manage_institutions': False,
+            'can_create_users': True,
+            'can_manage_all_users': False,
+            'can_view_analytics': True,
+            'can_manage_system_settings': False,
+            'can_delete_users': False,
+            'can_manage_roles': False
+        },
+        'alumni': {
+            'can_manage_institutions': False,
+            'can_create_users': False,
+            'can_manage_all_users': False,
+            'can_view_analytics': False,
+            'can_manage_system_settings': False,
+            'can_delete_users': False,
+            'can_manage_roles': False
+        },
+        'student': {
+            'can_manage_institutions': False,
+            'can_create_users': False,
+            'can_manage_all_users': False,
+            'can_view_analytics': False,
+            'can_manage_system_settings': False,
+            'can_delete_users': False,
+            'can_manage_roles': False
+        }
+    }
+    return permissions.get(role, {})
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    """Logout endpoint"""
+    session.clear()
+    return {'success': True, 'message': 'Logged out successfully'}
+
+# Super Admin Authentication Check
+def require_super_admin():
+    """Decorator to require super admin access"""
+    def decorator(f):
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session or session.get('user_role') != 'super_admin':
+                return {'success': False, 'error': 'Super admin access required'}, 403
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    return decorator
+
+# Super Admin API Endpoints
+@app.route('/api/super-admin/dashboard-stats', methods=['GET'])
+@require_super_admin()
+def get_dashboard_stats():
+    """Get dashboard statistics for super admin"""
+    try:
+        from src.models.user import User
+        from src.models.institution import Institution
+        
+        with app.app_context():
+            # Get user statistics
+            total_users = User.query.count()
+            super_admins = User.query.filter_by(role='super_admin').count()
+            admins = User.query.filter_by(role='admin').count()
+            alumni = User.query.filter_by(role='alumni').count()
+            students = User.query.filter_by(role='student').count()
+            
+            # Get institution statistics
+            total_institutions = Institution.query.count() if Institution else 0
+            active_users = User.query.filter_by(status='active').count()
+            
+            return {
+                'success': True,
+                'stats': {
+                    'users': {
+                        'total': total_users,
+                        'super_admins': super_admins,
+                        'admins': admins,
+                        'alumni': alumni,
+                        'students': students,
+                        'active': active_users
+                    },
+                    'institutions': {
+                        'total': total_institutions
+                    }
+                }
+            }
+    except Exception as e:
+        import traceback
+        print(f"Dashboard stats error: {e}")
+        traceback.print_exc()
+        return {'success': False, 'error': 'Failed to fetch dashboard stats'}, 500
+
+@app.route('/api/super-admin/users', methods=['GET'])
+@require_super_admin()
+def get_all_users():
+    """Get all users with pagination"""
+    try:
+        from src.models.user import User
+        
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        search = request.args.get('search', '')
+        role_filter = request.args.get('role')
+        
+        with app.app_context():
+            query = User.query
+            
+            if search:
+                query = query.filter(
+                    (User.email.contains(search)) |
+                    (User.username.contains(search)) |
+                    (User.first_name.contains(search)) |
+                    (User.last_name.contains(search))
+                )
+            
+            if role_filter:
+                query = query.filter(User.role == role_filter)
+            
+            users = query.paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            
+            return {
+                'success': True,
+                'users': [{
+                    'id': user.id,
+                    'email': user.email,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': user.role.value,
+                    'status': user.status.value,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
+                } for user in users.items],
+                'pagination': {
+                    'page': page,
+                    'pages': users.pages,
+                    'per_page': per_page,
+                    'total': users.total,
+                    'has_next': users.has_next,
+                    'has_prev': users.has_prev
+                }
+            }
+    except Exception as e:
+        import traceback
+        print(f"Get users error: {e}")
+        traceback.print_exc()
+        return {'success': False, 'error': 'Failed to fetch users'}, 500
+
+@app.route('/api/super-admin/create-user', methods=['POST'])
+@require_super_admin()
+def create_user():
+    """Create a new user (super admin only)"""
+    try:
+        from src.models.user import User, UserRole, UserStatus
+        
+        data = request.get_json()
+        
+        required_fields = ['email', 'username', 'password', 'role', 'first_name', 'last_name']
+        for field in required_fields:
+            if not data.get(field):
+                return {'success': False, 'error': f'{field} is required'}, 400
+        
+        with app.app_context():
+            # Check if user already exists
+            if User.query.filter_by(email=data['email']).first():
+                return {'success': False, 'error': 'User with this email already exists'}, 400
+            
+            if User.query.filter_by(username=data['username']).first():
+                return {'success': False, 'error': 'Username already taken'}, 400
+            
+            # Create new user
+            new_user = User(
+                email=data['email'],
+                username=data['username'],
+                first_name=data['first_name'],
+                last_name=data['last_name'],
+                role=UserRole(data['role']),
+                status=UserStatus('active')
+            )
+            new_user.set_password(data['password'])
+            
+            db.session.add(new_user)
+            db.session.commit()
+            
+            return {
+                'success': True,
+                'message': 'User created successfully',
+                'user': {
+                    'id': new_user.id,
+                    'email': new_user.email,
+                    'username': new_user.username,
+                    'first_name': new_user.first_name,
+                    'last_name': new_user.last_name,
+                    'role': new_user.role.value,
+                    'status': new_user.status.value
+                }
+            }
+    except Exception as e:
+        import traceback
+        print(f"Create user error: {e}")
+        traceback.print_exc()
+        return {'success': False, 'error': 'Failed to create user'}, 500
+
+@app.route('/api/super-admin/institutions', methods=['GET'])
+@require_super_admin()
+def get_institutions():
+    """Get all institutions"""
+    try:
+        institutions = [
+            {
+                'id': 1,
+                'name': 'Sample Institution 1',
+                'type': 'University',
+                'location': 'New Delhi',
+                'status': 'active',
+                'admin_count': 2,
+                'student_count': 150,
+                'alumni_count': 500
+            },
+            {
+                'id': 2,
+                'name': 'Sample Institution 2', 
+                'type': 'College',
+                'location': 'Mumbai',
+                'status': 'active',
+                'admin_count': 1,
+                'student_count': 80,
+                'alumni_count': 200
+            }
+        ]
+        return {'success': True, 'institutions': institutions}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch institutions'}, 500
 def get_colleges_simple():
     """Simple colleges endpoint that doesn't require database"""
     colleges = [
