@@ -125,12 +125,20 @@ const SuperAdminDashboard = () => {
         const data = await apiCall('/api/super-admin/users');
         if (data.success) {
           setUsers(data.users);
-        } else {
-          throw new Error('API failed');
+          localStorage.setItem('mock_users', JSON.stringify(data.users));
+          return;
         }
       } catch (apiError) {
-        console.log('API not available, using mock users');
+        console.log('API not available, using stored/mock users');
+      }
+      
+      // Use stored data or default mock data
+      const storedUsers = localStorage.getItem('mock_users');
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers));
+      } else {
         setUsers(mockUsers);
+        localStorage.setItem('mock_users', JSON.stringify(mockUsers));
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -141,8 +149,8 @@ const SuperAdminDashboard = () => {
   const fetchInstitutions = async () => {
     setLoading(true);
     try {
-      // Use mock data for now since backend is not accessible
-      const mockInstitutions = [
+      // Default mock data
+      const defaultInstitutions = [
         {
           id: 1,
           name: 'Indian Institute of Technology Delhi',
@@ -171,17 +179,25 @@ const SuperAdminDashboard = () => {
         }
       ];
       
-      // Try API call first, fall back to mock data
+      // Try API call first
       try {
         const data = await apiCall('/api/super-admin/institutions');
         if (data.success) {
           setInstitutions(data.institutions);
-        } else {
-          throw new Error('API failed');
+          localStorage.setItem('mock_institutions', JSON.stringify(data.institutions));
+          return;
         }
       } catch (apiError) {
-        console.log('API not available, using mock data');
-        setInstitutions(mockInstitutions);
+        console.log('API not available, using stored/mock data');
+      }
+      
+      // Use stored data or default mock data
+      const storedInstitutions = localStorage.getItem('mock_institutions');
+      if (storedInstitutions) {
+        setInstitutions(JSON.parse(storedInstitutions));
+      } else {
+        setInstitutions(defaultInstitutions);
+        localStorage.setItem('mock_institutions', JSON.stringify(defaultInstitutions));
       }
     } catch (error) {
       console.error('Error fetching institutions:', error);
@@ -237,12 +253,12 @@ const SuperAdminDashboard = () => {
   const CreateUserModal = () => {
     const [formData, setFormData] = useState({
       email: '',
-      username: '',
-      password: '',
       first_name: '',
       last_name: '',
       role: 'alumni',
-      institution_id: ''
+      institution_id: '',
+      graduation_year: '',
+      department: ''
     });
     const [creating, setCreating] = useState(false);
 
@@ -251,43 +267,91 @@ const SuperAdminDashboard = () => {
       setCreating(true);
       
       try {
-        const data = await apiCall('/api/super-admin/create-user', {
-          method: 'POST',
-          body: JSON.stringify(formData)
-        });
+        // Find institution name for the selected institution
+        const selectedInstitution = institutions.find(inst => inst.id == formData.institution_id);
         
-        if (data.success) {
-          alert('User created successfully!');
-          setShowCreateUserModal(false);
-          fetchUsers(); // Refresh users list
-          setFormData({
-            email: '',
-            username: '',
-            password: '',
-            first_name: '',
-            last_name: '',
-            role: 'alumni'
+        // Try API call first
+        try {
+          const data = await apiCall('/api/super-admin/create-user', {
+            method: 'POST',
+            body: JSON.stringify(formData)
           });
-        } else {
-          alert(data.error || 'Failed to create user');
+          
+          if (data.success) {
+            alert('User profile added successfully! An email invitation will be sent.');
+            setShowCreateUserModal(false);
+            fetchUsers();
+            resetForm();
+          } else {
+            alert(data.error || 'Failed to create user');
+          }
+        } catch (apiError) {
+          console.log('API not available, using mock user creation');
+          
+          // Mock user creation
+          const newUser = {
+            id: Date.now(),
+            email: formData.email,
+            username: formData.email.split('@')[0], // Generate username from email
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            role: formData.role,
+            status: 'pending_activation', // User needs to claim profile
+            created_at: new Date().toISOString(),
+            institution_id: formData.institution_id || null,
+            institution_name: selectedInstitution?.name || null,
+            institution_type: selectedInstitution?.type || null,
+            graduation_year: formData.graduation_year,
+            department: formData.department
+          };
+          
+          // Add to stored users
+          const storedUsers = localStorage.getItem('mock_users');
+          const currentUsers = storedUsers ? JSON.parse(storedUsers) : users;
+          const updatedUsers = [...currentUsers, newUser];
+          
+          localStorage.setItem('mock_users', JSON.stringify(updatedUsers));
+          setUsers(updatedUsers);
+          
+          alert(`User profile added successfully! (Mock mode)\n\n📧 In real system: An email invitation would be sent to ${formData.email} to claim their profile.`);
+          setShowCreateUserModal(false);
+          resetForm();
         }
       } catch (error) {
-        alert('Error creating user: ' + error.message);
+        alert('Error adding user: ' + error.message);
       }
       setCreating(false);
+    };
+    
+    const resetForm = () => {
+      setFormData({
+        email: '',
+        first_name: '',
+        last_name: '',
+        role: 'alumni',
+        institution_id: '',
+        graduation_year: '',
+        department: ''
+      });
     };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Create New User</h3>
+            <h3 className="text-xl font-bold text-gray-900">Add User Profile</h3>
             <button
               onClick={() => setShowCreateUserModal(false)}
               className="text-gray-400 hover:text-gray-600"
             >
               ✕
             </button>
+          </div>
+          
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              💡 <strong>Note:</strong> Username and password will be set when the user claims their profile via email invitation.
+            </p>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -312,27 +376,9 @@ const SuperAdminDashboard = () => {
             
             <input
               type="email"
-              placeholder="Email"
+              placeholder="Email Address"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-            
-            <input
-              type="text"
-              placeholder="Username"
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-            
-            <input
-              type="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -348,30 +394,64 @@ const SuperAdminDashboard = () => {
               <option value="super_admin">Super Admin</option>
             </select>
             
-            {/* Institution Selection - required for alumni and students */}
+            {/* Institution and Academic Details - required for alumni and students */}
             {(formData.role === 'alumni' || formData.role === 'student') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Institution *
-                </label>
-                <select
-                  value={formData.institution_id}
-                  onChange={(e) => setFormData({...formData, institution_id: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select Institution</option>
-                  {institutions.map((institution) => (
-                    <option key={institution.id} value={institution.id}>
-                      {institution.name}
-                    </option>
-                  ))}
-                </select>
-                {institutions.length === 0 && (
-                  <p className="text-sm text-orange-600 mt-1">
-                    ⚠️ No institutions available. Please add an institution first.
-                  </p>
-                )}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900">Academic Details</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Institution *
+                  </label>
+                  <select
+                    value={formData.institution_id}
+                    onChange={(e) => setFormData({...formData, institution_id: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Institution</option>
+                    {institutions.map((institution) => (
+                      <option key={institution.id} value={institution.id}>
+                        {institution.name}
+                      </option>
+                    ))}
+                  </select>
+                  {institutions.length === 0 && (
+                    <p className="text-sm text-orange-600 mt-1">
+                      ⚠️ No institutions available. Please add an institution first.
+                    </p>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {formData.role === 'alumni' ? 'Graduation Year' : 'Expected Graduation'}
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g., 2020"
+                      value={formData.graduation_year}
+                      onChange={(e) => setFormData({...formData, graduation_year: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="1950"
+                      max="2030"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Department/Course
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Computer Science"
+                      value={formData.department}
+                      onChange={(e) => setFormData({...formData, department: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </div>
             )}
             
@@ -386,10 +466,10 @@ const SuperAdminDashboard = () => {
               <button
                 type="submit"
                 disabled={creating}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {creating ? 'Creating...' : 'Create User'}
-              </button>
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {creating ? 'Adding...' : 'Add User Profile'}
+                  </button>
             </div>
           </form>
         </div>
@@ -439,7 +519,7 @@ const SuperAdminDashboard = () => {
         } catch (apiError) {
           console.log('API not available, using mock creation');
           
-          // Mock creation - just add to current institutions list
+          // Mock creation - add to current list and persist
           const newInstitution = {
             id: Date.now(), // Simple ID generation
             ...formData,
@@ -450,7 +530,9 @@ const SuperAdminDashboard = () => {
             created_at: new Date().toISOString()
           };
           
-          setInstitutions(prev => [...prev, newInstitution]);
+          const updatedInstitutions = [...institutions, newInstitution];
+          setInstitutions(updatedInstitutions);
+          localStorage.setItem('mock_institutions', JSON.stringify(updatedInstitutions));
           alert('Institution created successfully! (Mock mode)');
           setShowCreateInstitutionModal(false);
           setFormData({
