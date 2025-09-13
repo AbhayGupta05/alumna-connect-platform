@@ -289,10 +289,12 @@ const SuperAdminDashboard = () => {
       setCreating(true);
       
       try {
+        console.log('Creating institution with data:', formData);
         const data = await apiCall('/api/super-admin/create-institution', {
           method: 'POST',
           body: JSON.stringify(formData)
         });
+        console.log('Institution creation response:', data);
         
         if (data.success) {
           alert('Institution created successfully!');

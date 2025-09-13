@@ -611,6 +611,10 @@ def create_institution():
     """Create a new institution (super admin only)"""
     try:
         data = request.get_json()
+        print(f"Create institution request data: {data}")  # Debug logging
+        
+        if not data:
+            return {'success': False, 'error': 'No data provided'}, 400
         
         required_fields = ['name', 'type', 'location']
         for field in required_fields:
@@ -618,8 +622,9 @@ def create_institution():
                 return {'success': False, 'error': f'{field} is required'}, 400
         
         # For now, just return success. Later this will save to database
+        import random
         institution_data = {
-            'id': len(institutions) + 3,  # Simple ID generation for demo
+            'id': random.randint(1000, 9999),  # Simple ID generation for demo
             'name': data['name'],
             'type': data['type'],
             'location': data['location'],
