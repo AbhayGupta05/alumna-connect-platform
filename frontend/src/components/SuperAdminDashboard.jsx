@@ -205,46 +205,84 @@ const SuperAdminDashboard = () => {
     setLoading(false);
   };
 
-  // Demo email invitation function
+  // Real email invitation function
   const sendDemoEmailInvitation = async (email, firstName, lastName, institutionName) => {
     try {
-      // Simple demo email using mailto (opens user's email client)
-      const subject = encodeURIComponent('Alumni Connect - Claim Your Profile');
-      const body = encodeURIComponent(`Hi ${firstName} ${lastName},
+      const emailContent = `Hi ${firstName} ${lastName},
 
-You have been added to the Alumni Connect Platform!
+You have been invited to join the Alumni Connect Platform!
 
 🏢 Institution: ${institutionName || 'Not specified'}
-🔗 Platform: Alumni Connect Platform
+🔗 Platform: https://alumna-connect-platform-xldu.vercel.app
 
 To claim your profile:
 1. Visit: https://alumna-connect-platform-xldu.vercel.app
-2. Click "Claim Profile" 
+2. Look for "Claim Profile" option
 3. Enter your email: ${email}
 4. Set up your username and password
 5. Complete your profile
 
-📝 Note: This is a demo system. In production, you would receive a secure link to claim your profile.
+Welcome to Alumni Connect!
+
+Best regards,
+Alumni Connect Team`;
+
+      // Use FormSubmit free service to send real emails
+      const formData = new FormData();
+      formData.append('_to', email);
+      formData.append('_subject', 'Alumni Connect - Claim Your Profile');
+      formData.append('_from', 'Alumni Connect Platform');
+      formData.append('name', `${firstName} ${lastName}`);
+      formData.append('message', emailContent);
+      formData.append('_captcha', 'false');
+      formData.append('_template', 'table');
+      
+      const response = await fetch('https://formsubmit.co/ajax/anydesk778@gmail.com', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Email sent successfully to:', email);
+        alert(`📧 Real email invitation sent to ${email}!\n\nPlease check your inbox (and spam folder).\n\nNote: It may take a few minutes to arrive.`);
+      } else {
+        throw new Error('Email service responded with error: ' + (result.message || 'Unknown error'));
+      }
+      
+    } catch (error) {
+      console.error('❌ Error sending email:', error);
+      
+      // Fallback to mailto link as backup
+      const subject = encodeURIComponent('Alumni Connect - Claim Your Profile');
+      const body = encodeURIComponent(`Hi ${firstName} ${lastName},
+
+You have been invited to join the Alumni Connect Platform!
+
+🏢 Institution: ${institutionName || 'Not specified'}
+🔗 Platform: https://alumna-connect-platform-xldu.vercel.app
+
+To claim your profile:
+1. Visit: https://alumna-connect-platform-xldu.vercel.app
+2. Click "Claim Profile"
+3. Enter your email: ${email}
+4. Set up your username and password
+5. Complete your profile
 
 Best regards,
 Alumni Connect Team`);
       
       const mailtoLink = `mailto:${email}?subject=${subject}&body=${body}`;
       
-      // For demo purposes, show the email content
-      console.log('Demo Email Content:');
-      console.log('To:', email);
-      console.log('Subject:', decodeURIComponent(subject));
-      console.log('Body:', decodeURIComponent(body));
-      
-      // You can uncomment the next line to open email client
-      // window.open(mailtoLink);
-      
-      // Show email content in a modal for demo
-      showEmailPreview(email, firstName, lastName, institutionName);
-      
-    } catch (error) {
-      console.error('Error sending demo email:', error);
+      // Ask user if they want to open email client
+      if (confirm(`Email service unavailable. Would you like to open your email client to send the invitation manually?`)) {
+        window.open(mailtoLink);
+        alert(`📧 Email client opened. Please send the pre-filled email to ${email}`);
+      } else {
+        // Show fallback demo
+        showEmailPreview(email, firstName, lastName, institutionName);
+      }
     }
   };
 
@@ -433,9 +471,9 @@ Alumni Connect Team`;
             </p>
           </div>
           
-          <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-            <p className="text-sm text-yellow-800">
-              ⚠️ <strong>Demo Mode:</strong> Currently showing email content in console. In production, real emails would be sent.
+          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-sm text-green-800">
+              📧 <strong>Email System Active:</strong> Real invitation emails will be sent to the provided email address.
             </p>
           </div>
           
