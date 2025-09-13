@@ -693,6 +693,232 @@ def delete_user_super_admin(user_id):
         traceback.print_exc()
         return {'success': False, 'error': 'Failed to delete user'}, 500
 
+# Alumni Authentication Check
+def require_alumni():
+    """Decorator to require alumni access"""
+    def decorator(f):
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session or session.get('user_role') not in ['alumni']:
+                return {'success': False, 'error': 'Alumni access required'}, 403
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    return decorator
+
+# Alumni Dashboard API Endpoints
+@app.route('/api/alumni/settings', methods=['GET'])
+@require_alumni()
+def get_alumni_settings():
+    """Get alumni settings"""
+    try:
+        # For now, return default settings. Later this will be from database
+        settings = {
+            'profilePublicationEnabled': False,
+            'emailNotifications': True,
+            'profileVisibility': 'institute'
+        }
+        return {'success': True, 'settings': settings}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch settings'}, 500
+
+@app.route('/api/alumni/settings', methods=['PUT'])
+@require_alumni()
+def update_alumni_settings():
+    """Update alumni settings"""
+    try:
+        data = request.get_json()
+        # For now, just return success. Later this will save to database
+        return {'success': True, 'message': 'Settings updated successfully'}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to update settings'}, 500
+
+@app.route('/api/alumni/institute/feed', methods=['GET'])
+@require_alumni()
+def get_institute_feed():
+    """Get institute-specific feed for alumni"""
+    try:
+        feed_data = [
+            {
+                'id': 1,
+                'type': 'announcement',
+                'title': 'Alumni Reunion 2025 Registration Open',
+                'content': 'Join us for the biggest alumni gathering! Register now for early bird pricing.',
+                'author': 'IIT Delhi Alumni Office',
+                'timestamp': '2024-12-13T10:30:00Z',
+                'likes': 45,
+                'comments': 12
+            },
+            {
+                'id': 2,
+                'type': 'achievement',
+                'title': 'Congratulations to Rahul Sharma (Class of 2018)',
+                'content': 'Just got promoted to Senior Software Engineer at Google!',
+                'author': 'Rahul Sharma',
+                'timestamp': '2024-12-12T15:45:00Z',
+                'likes': 89,
+                'comments': 23
+            }
+        ]
+        return {'success': True, 'feed': feed_data}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch institute feed'}, 500
+
+@app.route('/api/alumni/global/feed', methods=['GET'])
+@require_alumni()
+def get_global_feed():
+    """Get global feed for alumni"""
+    try:
+        feed_data = [
+            {
+                'id': 1,
+                'type': 'professional_update',
+                'title': 'Industry Insight: The Future of AI',
+                'content': 'Sharing my thoughts on how AI will transform various industries in the next decade.',
+                'author': 'Dr. Sarah Chen (MIT Alumni)',
+                'timestamp': '2024-12-13T09:15:00Z',
+                'likes': 234,
+                'comments': 67
+            },
+            {
+                'id': 2,
+                'type': 'career_move',
+                'title': 'Exciting Career Move!',
+                'content': 'Thrilled to announce my new role as CTO at InnovateTech. Looking forward to this new challenge!',
+                'author': 'Michael Rodriguez (Stanford Alumni)',
+                'timestamp': '2024-12-12T14:20:00Z',
+                'likes': 156,
+                'comments': 45
+            }
+        ]
+        return {'success': True, 'feed': feed_data}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch global feed'}, 500
+
+@app.route('/api/alumni/institute/connections', methods=['GET'])
+@require_alumni()
+def get_institute_connections():
+    """Get institute connections for alumni"""
+    try:
+        connections = [
+            {'id': 1, 'name': 'Priya Patel', 'batch': '2019', 'department': 'CSE', 'company': 'Microsoft'},
+            {'id': 2, 'name': 'Arjun Kumar', 'batch': '2017', 'department': 'ECE', 'company': 'Samsung'},
+            {'id': 3, 'name': 'Sneha Reddy', 'batch': '2020', 'department': 'CSE', 'company': 'Amazon'}
+        ]
+        return {'success': True, 'connections': connections}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch institute connections'}, 500
+
+@app.route('/api/alumni/global/connections', methods=['GET'])
+@require_alumni()
+def get_global_connections():
+    """Get global connections for alumni"""
+    try:
+        connections = [
+            {'id': 1, 'name': 'Elena Vasquez', 'university': 'Stanford', 'field': 'AI Research', 'company': 'OpenAI'},
+            {'id': 2, 'name': 'James Wilson', 'university': 'MIT', 'field': 'Robotics', 'company': 'Boston Dynamics'},
+            {'id': 3, 'name': 'Li Wei', 'university': 'Tsinghua', 'field': 'Quantum Computing', 'company': 'IBM Research'}
+        ]
+        return {'success': True, 'connections': connections}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch global connections'}, 500
+
+@app.route('/api/alumni/institute/events', methods=['GET'])
+@require_alumni()
+def get_institute_events():
+    """Get institute events for alumni"""
+    try:
+        events = [
+            {
+                'id': 1,
+                'title': 'Tech Talk: AI in Healthcare',
+                'date': '2024-12-20',
+                'type': 'virtual',
+                'attendees': 150
+            },
+            {
+                'id': 2,
+                'title': 'Annual Alumni Meet',
+                'date': '2024-12-25',
+                'type': 'physical',
+                'location': 'IIT Delhi Campus'
+            }
+        ]
+        return {'success': True, 'events': events}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch institute events'}, 500
+
+@app.route('/api/alumni/global/events', methods=['GET'])
+@require_alumni()
+def get_global_events():
+    """Get global events for alumni"""
+    try:
+        events = [
+            {
+                'id': 1,
+                'title': 'Global Tech Summit 2025',
+                'date': '2025-01-15',
+                'type': 'hybrid',
+                'attendees': 5000,
+                'global': True
+            },
+            {
+                'id': 2,
+                'title': 'Cross-University Innovation Challenge',
+                'date': '2025-02-01',
+                'type': 'virtual',
+                'universities': ['MIT', 'Stanford', 'IIT']
+            }
+        ]
+        return {'success': True, 'events': events}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch global events'}, 500
+
+@app.route('/api/alumni/institute/jobs', methods=['GET'])
+@require_alumni()
+def get_institute_jobs():
+    """Get institute job opportunities for alumni"""
+    try:
+        jobs = [
+            {
+                'id': 1,
+                'title': 'Senior Software Developer',
+                'company': 'TechCorp India',
+                'location': 'Bangalore',
+                'type': 'Full-time',
+                'postedBy': 'alumni'
+            }
+        ]
+        return {'success': True, 'jobs': jobs}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch institute jobs'}, 500
+
+@app.route('/api/alumni/global/jobs', methods=['GET'])
+@require_alumni()
+def get_global_jobs():
+    """Get global job opportunities for alumni"""
+    try:
+        jobs = [
+            {
+                'id': 1,
+                'title': 'Principal Engineer - AI/ML',
+                'company': 'Google DeepMind',
+                'location': 'London, UK',
+                'type': 'Full-time',
+                'global': True
+            },
+            {
+                'id': 2,
+                'title': 'Senior Product Manager',
+                'company': 'Meta',
+                'location': 'Remote',
+                'type': 'Full-time',
+                'global': True
+            }
+        ]
+        return {'success': True, 'jobs': jobs}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch global jobs'}, 500
+
 @app.route('/alumni-claim/colleges')
 def get_colleges_simple():
     """Simple colleges endpoint that doesn't require database"""

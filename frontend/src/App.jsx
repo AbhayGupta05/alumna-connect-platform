@@ -15,6 +15,7 @@ import AcademicLegacy from './components/AcademicLegacy'
 import Networking from './components/Networking'
 import AdminDashboard from './components/AdminDashboard'
 import SuperAdminDashboard from './components/SuperAdminDashboard'
+import AlumniDashboard from './components/AlumniDashboard'
 import UniversalLoginPage from './components/UniversalLoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import RegisterPage from './components/RegisterPage'
@@ -96,23 +97,7 @@ const AppContent = () => {
             path="/alumni/dashboard" 
             element={
               <ProtectedRoute requiredRole="alumni">
-                <div className="min-h-screen bg-gray-50">
-                  <Navbar 
-                    userType={user?.role} 
-                    onLogout={handleLogout}
-                    onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-                  />
-                  <div className="flex">
-                    <Sidebar 
-                      userType={user?.role} 
-                      isOpen={sidebarOpen}
-                      onClose={() => setSidebarOpen(false)}
-                    />
-                    <main className="flex-1 lg:ml-64 pt-16">
-                      <Dashboard />
-                    </main>
-                  </div>
-                </div>
+                <AlumniDashboard />
               </ProtectedRoute>
             } 
           />
