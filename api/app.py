@@ -648,6 +648,8 @@ def create_institution():
         print(f"Create institution error: {e}")
         traceback.print_exc()
         return {'success': False, 'error': 'Failed to create institution'}, 500
+
+@app.route('/alumni-claim/colleges')
 def get_colleges_simple():
     """Simple colleges endpoint that doesn't require database"""
     colleges = [
@@ -726,5 +728,11 @@ def handle_options(path=''):
     return make_response('', 404)
 
 # This is required for Vercel
+app.debug = False
+
+# Export for Vercel
+def application(environ, start_response):
+    return app(environ, start_response)
+
 if __name__ == '__main__':
     app.run()

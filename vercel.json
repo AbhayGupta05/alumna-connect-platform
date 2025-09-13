@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/src/index.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
     },
     {
@@ -16,7 +16,23 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/src/index.py"
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/alumni-claim/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/create-admin",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/debug-db",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/init-db",
+      "dest": "/api/index.py"
     },
     {
       "src": "/(.*\\..*)",

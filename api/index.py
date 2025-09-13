@@ -14,7 +14,7 @@ import_error_msg = "No error"
 
 # Try to import the main application routes
 try:
-    from src.index import app as main_app
+    from app import app as main_app
     # If successful, use the main app
     app = main_app
     main_app_loaded = True
