@@ -205,6 +205,82 @@ const SuperAdminDashboard = () => {
     setLoading(false);
   };
 
+  // Demo email invitation function
+  const sendDemoEmailInvitation = async (email, firstName, lastName, institutionName) => {
+    try {
+      // Simple demo email using mailto (opens user's email client)
+      const subject = encodeURIComponent('Alumni Connect - Claim Your Profile');
+      const body = encodeURIComponent(`Hi ${firstName} ${lastName},
+
+You have been added to the Alumni Connect Platform!
+
+🏢 Institution: ${institutionName || 'Not specified'}
+🔗 Platform: Alumni Connect Platform
+
+To claim your profile:
+1. Visit: https://alumna-connect-platform-xldu.vercel.app
+2. Click "Claim Profile" 
+3. Enter your email: ${email}
+4. Set up your username and password
+5. Complete your profile
+
+📝 Note: This is a demo system. In production, you would receive a secure link to claim your profile.
+
+Best regards,
+Alumni Connect Team`);
+      
+      const mailtoLink = `mailto:${email}?subject=${subject}&body=${body}`;
+      
+      // For demo purposes, show the email content
+      console.log('Demo Email Content:');
+      console.log('To:', email);
+      console.log('Subject:', decodeURIComponent(subject));
+      console.log('Body:', decodeURIComponent(body));
+      
+      // You can uncomment the next line to open email client
+      // window.open(mailtoLink);
+      
+      // Show email content in a modal for demo
+      showEmailPreview(email, firstName, lastName, institutionName);
+      
+    } catch (error) {
+      console.error('Error sending demo email:', error);
+    }
+  };
+
+  const showEmailPreview = (email, firstName, lastName, institutionName) => {
+    const emailContent = `Subject: Alumni Connect - Claim Your Profile
+
+Hi ${firstName} ${lastName},
+
+You have been added to the Alumni Connect Platform!
+
+🏢 Institution: ${institutionName || 'Not specified'}
+🔗 Platform: Alumni Connect Platform
+
+To claim your profile:
+1. Visit: https://alumna-connect-platform-xldu.vercel.app
+2. Click "Claim Profile" 
+3. Enter your email: ${email}
+4. Set up your username and password
+5. Complete your profile
+
+📝 Note: This is a demo system. In production, you would receive a secure link to claim your profile.
+
+Best regards,
+Alumni Connect Team`;
+
+    // Show email content in browser console and alert for demo
+    console.log('📧 EMAIL SENT TO:', email);
+    console.log('📧 EMAIL CONTENT:');
+    console.log(emailContent);
+    
+    // You could also create a modal to show the email content
+    setTimeout(() => {
+      alert(`📧 DEMO EMAIL SENT!\n\nTo: ${email}\n\nEmail content logged to browser console.\n\nIn a real system, ${firstName} would receive an actual email.`);
+    }, 1000);
+  };
+
   // Filter users based on search and filters
   const filteredUsers = users.filter(user => {
     const matchesSearch = !searchTerm || 
@@ -313,7 +389,10 @@ const SuperAdminDashboard = () => {
           localStorage.setItem('mock_users', JSON.stringify(updatedUsers));
           setUsers(updatedUsers);
           
-          alert(`User profile added successfully! (Mock mode)\n\n📧 In real system: An email invitation would be sent to ${formData.email} to claim their profile.`);
+          // Send demo email invitation
+          sendDemoEmailInvitation(formData.email, formData.first_name, formData.last_name, selectedInstitution?.name);
+          
+          alert(`User profile added successfully!\n\n📧 Demo email invitation sent to ${formData.email}`);
           setShowCreateUserModal(false);
           resetForm();
         }
@@ -351,6 +430,12 @@ const SuperAdminDashboard = () => {
           <div className="mb-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
               💡 <strong>Note:</strong> Username and password will be set when the user claims their profile via email invitation.
+            </p>
+          </div>
+          
+          <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+            <p className="text-sm text-yellow-800">
+              ⚠️ <strong>Demo Mode:</strong> Currently showing email content in console. In production, real emails would be sent.
             </p>
           </div>
           
