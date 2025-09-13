@@ -12,6 +12,7 @@ const SuperAdminDashboard = () => {
   const [showCreateInstitutionModal, setShowCreateInstitutionModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [visiblePasswords, setVisiblePasswords] = useState(new Set());
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +81,8 @@ const SuperAdminDashboard = () => {
           created_at: '2024-01-01T00:00:00',
           institution_id: null,
           institution_name: null,
-          institution_type: null
+          institution_type: null,
+          password: 'SuperAdmin@123'
         },
         {
           id: 2,
@@ -93,7 +95,8 @@ const SuperAdminDashboard = () => {
           created_at: '2024-02-15T00:00:00',
           institution_id: 1,
           institution_name: 'Indian Institute of Technology Delhi',
-          institution_type: 'University'
+          institution_type: 'University',
+          password: 'John@IITD2024'
         },
         {
           id: 3,
@@ -106,7 +109,8 @@ const SuperAdminDashboard = () => {
           created_at: '2024-03-01T00:00:00',
           institution_id: 2,
           institution_name: 'University of Mumbai',
-          institution_type: 'University'
+          institution_type: 'University',
+          password: 'Jane@Mumbai2024'
         },
         {
           id: 4,
@@ -119,7 +123,8 @@ const SuperAdminDashboard = () => {
           created_at: '2024-01-20T00:00:00',
           institution_id: 1,
           institution_name: 'Indian Institute of Technology Delhi',
-          institution_type: 'University'
+          institution_type: 'University',
+          password: 'AdminIIT@2024'
         }
       ];
       
@@ -404,6 +409,14 @@ Alumni Connect Team`;
         } catch (apiError) {
           console.log('API not available, using mock user creation');
           
+          // Generate a temporary password
+          const generateTempPassword = () => {
+            const firstName = formData.first_name.charAt(0).toUpperCase() + formData.first_name.slice(1);
+            const lastName = formData.last_name.charAt(0).toUpperCase() + formData.last_name.slice(1);
+            const year = new Date().getFullYear();
+            return `${firstName}${lastName}@${year}`;
+          };
+
           // Mock user creation
           const newUser = {
             id: Date.now(),
@@ -418,7 +431,8 @@ Alumni Connect Team`;
             institution_name: selectedInstitution?.name || null,
             institution_type: selectedInstitution?.type || null,
             graduation_year: formData.graduation_year,
-            department: formData.department
+            department: formData.department,
+            password: generateTempPassword()
           };
           
           // Add to stored users
@@ -821,6 +835,34 @@ Alumni Connect Team`;
     setUserToDelete(null);
   };
 
+  const togglePasswordVisibility = (userId) => {
+    setVisiblePasswords(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const copyPasswordToClipboard = async (password, userName) => {
+    try {
+      await navigator.clipboard.writeText(password);
+      alert(`Password copied to clipboard for ${userName}!`);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = password;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert(`Password copied to clipboard for ${userName}!`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1087,6 +1129,7 @@ Alumni Connect Team`;
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institution</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -1107,6 +1150,40 @@ Alumni Connect Team`;
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {user.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                                {visiblePasswords.has(user.id) ? (user.password || 'No password') : '••••••••'}
+                              </span>
+                              <button
+                                onClick={() => togglePasswordVisibility(user.id)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                title={visiblePasswords.has(user.id) ? 'Hide password' : 'Show password'}
+                              >
+                                {visiblePasswords.has(user.id) ? (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                )}
+                              </button>
+                              {visiblePasswords.has(user.id) && user.password && (
+                                <button
+                                  onClick={() => copyPasswordToClipboard(user.password, `${user.first_name} ${user.last_name}`)}
+                                  className="text-gray-400 hover:text-blue-600 transition-colors"
+                                  title="Copy password"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {user.institution_name ? (
