@@ -578,12 +578,6 @@ def auth_logout():
     from flask import session
     session.clear()
     return {'success': True, 'message': 'Logged out successfully'}
-            
-    except Exception as e:
-        import traceback
-        print(f"Login error: {e}")
-        traceback.print_exc()
-        return {'success': False, 'error': 'Login failed'}, 500
 
 def get_user_permissions(role):
     """Return permissions based on user role"""
@@ -630,6 +624,7 @@ def get_user_permissions(role):
 @app.route('/api/logout', methods=['POST'])
 def logout():
     """Logout endpoint"""
+    from flask import session
     session.clear()
     return {'success': True, 'message': 'Logged out successfully'}
 
