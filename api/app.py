@@ -293,7 +293,7 @@ def login():
         if not email or not password:
             return {'success': False, 'error': 'Email and password required'}, 400
         
-        # Mock users for demo (fallback when database is not available)
+        # Enhanced mock users with proper password handling
         mock_users = {
             'anydesk778@gmail.com': {
                 'id': 1,
@@ -304,7 +304,10 @@ def login():
                 'role': 'super_admin',
                 'status': 'active',
                 'password': 'SuperAdmin@123',
-                'created_at': '2024-01-01T00:00:00'
+                'created_at': '2024-01-01T00:00:00',
+                'institution_id': None,
+                'institution_name': None,
+                'institution_type': None
             },
             'john.doe@iitd.ac.in': {
                 'id': 2,
@@ -315,7 +318,10 @@ def login():
                 'role': 'alumni',
                 'status': 'active',
                 'password': 'John@IITD2024',
-                'created_at': '2024-02-15T00:00:00'
+                'created_at': '2024-02-15T00:00:00',
+                'institution_id': 1,
+                'institution_name': 'Indian Institute of Technology Delhi',
+                'institution_type': 'University'
             },
             'jane.smith@mu.ac.in': {
                 'id': 3,
@@ -326,7 +332,10 @@ def login():
                 'role': 'student',
                 'status': 'active',
                 'password': 'Jane@Mumbai2024',
-                'created_at': '2024-03-01T00:00:00'
+                'created_at': '2024-03-01T00:00:00',
+                'institution_id': 2,
+                'institution_name': 'University of Mumbai',
+                'institution_type': 'University'
             },
             'admin@iitd.ac.in': {
                 'id': 4,
@@ -337,7 +346,10 @@ def login():
                 'role': 'admin',
                 'status': 'active',
                 'password': 'AdminIIT@2024',
-                'created_at': '2024-01-20T00:00:00'
+                'created_at': '2024-01-20T00:00:00',
+                'institution_id': 1,
+                'institution_name': 'Indian Institute of Technology Delhi',
+                'institution_type': 'University'
             },
             'priya.patel@iitd.ac.in': {
                 'id': 5,
@@ -348,7 +360,10 @@ def login():
                 'role': 'alumni',
                 'status': 'active',
                 'password': 'Priya@IITD2024',
-                'created_at': '2024-03-10T00:00:00'
+                'created_at': '2024-03-10T00:00:00',
+                'institution_id': 1,
+                'institution_name': 'Indian Institute of Technology Delhi',
+                'institution_type': 'University'
             },
             'rahul.sharma@mu.ac.in': {
                 'id': 6,
@@ -359,7 +374,10 @@ def login():
                 'role': 'student',
                 'status': 'active',
                 'password': 'Rahul@Mumbai2024',
-                'created_at': '2024-04-01T00:00:00'
+                'created_at': '2024-04-01T00:00:00',
+                'institution_id': 2,
+                'institution_name': 'University of Mumbai',
+                'institution_type': 'University'
             },
             'sarah.johnson@iitd.ac.in': {
                 'id': 7,
@@ -370,7 +388,38 @@ def login():
                 'role': 'alumni',
                 'status': 'active',
                 'password': 'Sarah@IITD2024',
-                'created_at': '2024-04-15T00:00:00'
+                'created_at': '2024-04-15T00:00:00',
+                'institution_id': 1,
+                'institution_name': 'Indian Institute of Technology Delhi',
+                'institution_type': 'University'
+            },
+            'amit.kumar@iitd.ac.in': {
+                'id': 8,
+                'email': 'amit.kumar@iitd.ac.in',
+                'username': 'amit_pending',
+                'first_name': 'Amit',
+                'last_name': 'Kumar',
+                'role': 'alumni',
+                'status': 'pending_activation',
+                'password': 'TempPass@2024',
+                'created_at': '2024-12-10T00:00:00',
+                'institution_id': 1,
+                'institution_name': 'Indian Institute of Technology Delhi',
+                'institution_type': 'University'
+            },
+            'neha.gupta@mu.ac.in': {
+                'id': 9,
+                'email': 'neha.gupta@mu.ac.in',
+                'username': 'neha_pending',
+                'first_name': 'Neha',
+                'last_name': 'Gupta',
+                'role': 'student',
+                'status': 'pending_activation',
+                'password': 'TempPass@2024',
+                'created_at': '2024-12-11T00:00:00',
+                'institution_id': 2,
+                'institution_name': 'University of Mumbai',
+                'institution_type': 'University'
             }
         }
         
@@ -955,6 +1004,18 @@ def require_alumni():
         return decorated_function
     return decorator
 
+# Student Authentication Check
+def require_student():
+    """Decorator to require student access"""
+    def decorator(f):
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session or session.get('user_role') not in ['student']:
+                return {'success': False, 'error': 'Student access required'}, 403
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    return decorator
+
 # Alumni Dashboard API Endpoints
 @app.route('/api/alumni/settings', methods=['GET'])
 @require_alumni()
@@ -1168,6 +1229,137 @@ def get_global_jobs():
         return {'success': True, 'jobs': jobs}
     except Exception as e:
         return {'success': False, 'error': 'Failed to fetch global jobs'}, 500
+
+# Student Dashboard API Endpoints
+@app.route('/api/student/campus/feed', methods=['GET'])
+@require_student()
+def get_student_campus_feed():
+    """Get campus-specific feed for students"""
+    try:
+        feed_data = [
+            {
+                'id': 1,
+                'type': 'announcement',
+                'title': 'Final Exam Schedule Released',
+                'content': 'Check your student portal for the complete exam schedule. All students must register before the deadline.',
+                'author': 'Academic Office',
+                'timestamp': '2024-12-13T11:00:00Z',
+                'likes': 23,
+                'comments': 8,
+                'priority': 'high'
+            },
+            {
+                'id': 2,
+                'type': 'opportunity',
+                'title': 'Summer Internship Applications Open',
+                'content': 'Apply now for summer internships with our partner companies. Deadline: January 15th.',
+                'author': 'Career Services',
+                'timestamp': '2024-12-12T14:30:00Z',
+                'likes': 67,
+                'comments': 15,
+                'priority': 'medium'
+            }
+        ]
+        return {'success': True, 'feed': feed_data}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch campus feed'}, 500
+
+@app.route('/api/student/mentors', methods=['GET'])
+@require_student()
+def get_available_mentors():
+    """Get available alumni mentors for students"""
+    try:
+        mentors = [
+            {
+                'id': 1,
+                'name': 'John Doe',
+                'position': 'Senior Software Engineer at Google',
+                'graduation_year': '2018',
+                'department': 'Computer Science',
+                'expertise': ['Software Development', 'System Design', 'Career Guidance'],
+                'availability': 'Available',
+                'rating': 4.8,
+                'total_mentees': 12
+            },
+            {
+                'id': 2,
+                'name': 'Priya Patel',
+                'position': 'Product Manager at Microsoft',
+                'graduation_year': '2019',
+                'department': 'Computer Science',
+                'expertise': ['Product Management', 'Strategy', 'Leadership'],
+                'availability': 'Limited',
+                'rating': 4.9,
+                'total_mentees': 8
+            }
+        ]
+        return {'success': True, 'mentors': mentors}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch mentors'}, 500
+
+@app.route('/api/student/events', methods=['GET'])
+@require_student()
+def get_student_events():
+    """Get campus events for students"""
+    try:
+        events = [
+            {
+                'id': 1,
+                'title': 'Career Fair 2024',
+                'date': '2024-12-20',
+                'time': '10:00 AM',
+                'location': 'Student Center',
+                'type': 'career',
+                'attendees': 234,
+                'registered': True
+            },
+            {
+                'id': 2,
+                'title': 'Tech Talk: AI in Industry',
+                'date': '2024-12-22',
+                'time': '2:00 PM',
+                'location': 'Auditorium Hall',
+                'type': 'academic',
+                'attendees': 89,
+                'registered': False
+            }
+        ]
+        return {'success': True, 'events': events}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch student events'}, 500
+
+@app.route('/api/student/internships', methods=['GET'])
+@require_student()
+def get_student_internships():
+    """Get internship opportunities for students"""
+    try:
+        internships = [
+            {
+                'id': 1,
+                'title': 'Software Development Intern',
+                'company': 'TechStart Inc.',
+                'location': 'Bangalore',
+                'duration': '3 months',
+                'stipend': '₹25,000/month',
+                'deadline': '2025-01-15',
+                'requirements': ['Python', 'JavaScript', 'Database'],
+                'applied': False
+            },
+            {
+                'id': 2,
+                'title': 'Data Science Intern',
+                'company': 'Analytics Pro',
+                'location': 'Mumbai',
+                'duration': '6 months',
+                'stipend': '₹30,000/month',
+                'deadline': '2025-01-20',
+                'requirements': ['Python', 'Machine Learning', 'Statistics'],
+                'applied': True
+            }
+        ]
+        return {'success': True, 'internships': internships}
+    except Exception as e:
+        return {'success': False, 'error': 'Failed to fetch internships'}, 500
 
 @app.route('/alumni-claim/colleges')
 def get_colleges_simple():
