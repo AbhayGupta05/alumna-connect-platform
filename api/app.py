@@ -649,6 +649,50 @@ def create_institution():
         traceback.print_exc()
         return {'success': False, 'error': 'Failed to create institution'}, 500
 
+@app.route('/api/super-admin/users/<int:user_id>', methods=['DELETE'])
+@require_super_admin()
+def delete_user_super_admin(user_id):
+    """Delete a user (super admin only)"""
+    try:
+        from src.models.user import User
+        
+        with app.app_context():
+            user_to_delete = User.query.get(user_id)
+            
+            if not user_to_delete:
+                return {'success': False, 'error': 'User not found'}, 404
+            
+            # Prevent deletion of the last super admin
+            if user_to_delete.role.value == 'super_admin':
+                super_admin_count = User.query.filter_by(role='super_admin').count()
+                if super_admin_count <= 1:
+                    return {'success': False, 'error': 'Cannot delete the last super admin'}, 400
+            
+            # Store user info for response
+            deleted_user_info = {
+                'id': user_to_delete.id,
+                'email': user_to_delete.email,
+                'first_name': user_to_delete.first_name,
+                'last_name': user_to_delete.last_name,
+                'role': user_to_delete.role.value
+            }
+            
+            # Delete the user
+            db.session.delete(user_to_delete)
+            db.session.commit()
+            
+            return {
+                'success': True,
+                'message': f'User {deleted_user_info["first_name"]} {deleted_user_info["last_name"]} has been deleted successfully',
+                'deleted_user': deleted_user_info
+            }
+            
+    except Exception as e:
+        import traceback
+        print(f"Delete user error: {e}")
+        traceback.print_exc()
+        return {'success': False, 'error': 'Failed to delete user'}, 500
+
 @app.route('/alumni-claim/colleges')
 def get_colleges_simple():
     """Simple colleges endpoint that doesn't require database"""

@@ -10,6 +10,8 @@ const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showCreateInstitutionModal, setShowCreateInstitutionModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -768,6 +770,57 @@ Alumni Connect Team`;
     );
   };
 
+  // Delete user handlers
+  const handleDeleteUser = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setLoading(true);
+    try {
+      try {
+        // Try API call first
+        const data = await apiCall(`/api/super-admin/users/${userToDelete.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (data.success) {
+          // Remove from current users list
+          const updatedUsers = users.filter(user => user.id !== userToDelete.id);
+          setUsers(updatedUsers);
+          localStorage.setItem('mock_users', JSON.stringify(updatedUsers));
+          
+          alert(`User ${userToDelete.first_name} ${userToDelete.last_name} has been deleted successfully.`);
+        } else {
+          throw new Error(data.error || 'Failed to delete user');
+        }
+      } catch (apiError) {
+        console.log('API not available, using mock deletion');
+        
+        // Mock deletion - remove from stored users
+        const updatedUsers = users.filter(user => user.id !== userToDelete.id);
+        setUsers(updatedUsers);
+        localStorage.setItem('mock_users', JSON.stringify(updatedUsers));
+        
+        alert(`User ${userToDelete.first_name} ${userToDelete.last_name} has been deleted successfully. (Mock mode)`);
+      }
+    } catch (error) {
+      alert('Error deleting user: ' + error.message);
+    }
+    
+    setLoading(false);
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+  };
+
+  const cancelDeleteUser = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1038,6 +1091,7 @@ Alumni Connect Team`;
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1082,7 +1136,18 @@ Alumni Connect Team`;
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-red-600 hover:text-red-900 transition-colors"
+                              title="Delete User"
+                            >
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1164,6 +1229,47 @@ Alumni Connect Team`;
       
       {/* Create Institution Modal */}
       {showCreateInstitutionModal && <CreateInstitutionModal />}
+      
+      {/* Delete User Confirmation Modal */}
+      {showDeleteModal && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Delete User Account
+              </h3>
+              
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{userToDelete.first_name} {userToDelete.last_name}</strong> ({userToDelete.email})? 
+                <br /><br />
+                This action cannot be undone and will permanently remove all user data from the system.
+              </p>
+              
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={cancelDeleteUser}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteUser}
+                  disabled={loading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Deleting...' : 'Delete User'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
