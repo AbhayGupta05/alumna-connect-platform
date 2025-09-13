@@ -239,7 +239,7 @@ Alumni Connect Team`;
       formData.append('_captcha', 'false');
       formData.append('_template', 'table');
       
-      const response = await fetch('https://formsubmit.co/ajax/anydesk778@gmail.com', {
+      const response = await fetch(`https://formsubmit.co/ajax/${email}`, {
         method: 'POST',
         body: formData
       });
