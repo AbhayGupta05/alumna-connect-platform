@@ -474,6 +474,15 @@ def get_all_users():
                 page=page, per_page=per_page, error_out=False
             )
             
+            # For super admin, we'll add temporary password info
+            # In real implementation, passwords would be retrieved differently
+            temp_passwords = {
+                'anydesk778@gmail.com': 'SuperAdmin@123',
+                'john.doe@iitd.ac.in': 'John@IITD2024',
+                'jane.smith@mu.ac.in': 'Jane@Mumbai2024',
+                'admin@iitd.ac.in': 'AdminIIT@2024'
+            }
+            
             return {
                 'success': True,
                 'users': [{
@@ -488,7 +497,9 @@ def get_all_users():
                     # Add sample institution data - later this will be from database relationships
                     'institution_id': 1 if user.role.value in ['alumni', 'student'] else None,
                     'institution_name': 'Indian Institute of Technology Delhi' if user.role.value in ['alumni', 'student'] else None,
-                    'institution_type': 'University' if user.role.value in ['alumni', 'student'] else None
+                    'institution_type': 'University' if user.role.value in ['alumni', 'student'] else None,
+                    # Add password for super admin access (temporary implementation)
+                    'password': temp_passwords.get(user.email, f"{user.first_name}{user.last_name}@2024")
                 } for user in users.items],
                 'pagination': {
                     'page': page,

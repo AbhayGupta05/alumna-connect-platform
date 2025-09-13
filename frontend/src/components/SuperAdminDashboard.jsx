@@ -36,12 +36,13 @@ const SuperAdminDashboard = () => {
       // Mock data for stats
       const mockStats = {
         users: {
-          total: 25,
+          total: 9,
           super_admins: 1,
-          admins: 3,
-          alumni: 15,
-          students: 6,
-          active: 24
+          admins: 1,
+          alumni: 4,
+          students: 3,
+          active: 7,
+          pending_activation: 2
         },
         institutions: {
           total: 2
@@ -125,6 +126,76 @@ const SuperAdminDashboard = () => {
           institution_name: 'Indian Institute of Technology Delhi',
           institution_type: 'University',
           password: 'AdminIIT@2024'
+        },
+        {
+          id: 5,
+          email: 'priya.patel@iitd.ac.in',
+          username: 'priya_alumni',
+          first_name: 'Priya',
+          last_name: 'Patel',
+          role: 'alumni',
+          status: 'active',
+          created_at: '2024-03-10T00:00:00',
+          institution_id: 1,
+          institution_name: 'Indian Institute of Technology Delhi',
+          institution_type: 'University',
+          password: 'Priya@IITD2024'
+        },
+        {
+          id: 6,
+          email: 'rahul.sharma@mu.ac.in',
+          username: 'rahul_student',
+          first_name: 'Rahul',
+          last_name: 'Sharma',
+          role: 'student',
+          status: 'active',
+          created_at: '2024-04-01T00:00:00',
+          institution_id: 2,
+          institution_name: 'University of Mumbai',
+          institution_type: 'University',
+          password: 'Rahul@Mumbai2024'
+        },
+        {
+          id: 7,
+          email: 'sarah.johnson@iitd.ac.in',
+          username: 'sarah_alumni',
+          first_name: 'Sarah',
+          last_name: 'Johnson',
+          role: 'alumni',
+          status: 'active',
+          created_at: '2024-04-15T00:00:00',
+          institution_id: 1,
+          institution_name: 'Indian Institute of Technology Delhi',
+          institution_type: 'University',
+          password: 'Sarah@IITD2024'
+        },
+        {
+          id: 8,
+          email: 'amit.kumar@iitd.ac.in',
+          username: 'amit_pending',
+          first_name: 'Amit',
+          last_name: 'Kumar',
+          role: 'alumni',
+          status: 'pending_activation',
+          created_at: '2024-12-10T00:00:00',
+          institution_id: 1,
+          institution_name: 'Indian Institute of Technology Delhi',
+          institution_type: 'University',
+          password: 'TempPass@2024'
+        },
+        {
+          id: 9,
+          email: 'neha.gupta@mu.ac.in',
+          username: 'neha_pending',
+          first_name: 'Neha',
+          last_name: 'Gupta',
+          role: 'student',
+          status: 'pending_activation',
+          created_at: '2024-12-11T00:00:00',
+          institution_id: 2,
+          institution_name: 'University of Mumbai',
+          institution_type: 'University',
+          password: 'TempPass@2024'
         }
       ];
       
@@ -1077,6 +1148,7 @@ Alumni Connect Team`;
                   >
                     <option value="">All Status</option>
                     <option value="active">Active</option>
+                    <option value="pending_activation">Pending Activation</option>
                     <option value="inactive">Inactive</option>
                     <option value="suspended">Suspended</option>
                   </select>
@@ -1153,9 +1225,22 @@ Alumni Connect Team`;
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                                {visiblePasswords.has(user.id) ? (user.password || 'No password') : '••••••••'}
+                              <span className={`font-mono text-xs px-2 py-1 rounded ${
+                                user.status === 'pending_activation' 
+                                  ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {visiblePasswords.has(user.id) ? (
+                                  user.status === 'pending_activation' 
+                                    ? (user.password || 'Temporary Password')
+                                    : (user.password || 'No password')
+                                ) : '••••••••'}
                               </span>
+                              {user.status === 'pending_activation' && (
+                                <span className="text-xs text-yellow-600 font-medium">
+                                  (Temp)
+                                </span>
+                              )}
                               <button
                                 onClick={() => togglePasswordVisibility(user.id)}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -1207,9 +1292,12 @@ Alumni Connect Team`;
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              user.status === 'active' ? 'bg-green-100 text-green-800' :
+                              user.status === 'pending_activation' ? 'bg-yellow-100 text-yellow-800' :
+                              user.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                              'bg-red-100 text-red-800'
                             }`}>
-                              {user.status}
+                              {user.status.replace('_', ' ')}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
