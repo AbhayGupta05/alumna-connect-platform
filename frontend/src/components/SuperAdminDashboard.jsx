@@ -9,6 +9,13 @@ const SuperAdminDashboard = () => {
   const [institutions, setInstitutions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showCreateInstitutionModal, setShowCreateInstitutionModal] = useState(false);
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [institutionFilter, setInstitutionFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     if (activeTab === 'overview') {
@@ -59,6 +66,21 @@ const SuperAdminDashboard = () => {
     setLoading(false);
   };
 
+  // Filter users based on search and filters
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = !searchTerm || 
+      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = !roleFilter || user.role === roleFilter;
+    const matchesInstitution = !institutionFilter || user.institution_id === institutionFilter;
+    const matchesStatus = !statusFilter || user.status === statusFilter;
+    
+    return matchesSearch && matchesRole && matchesInstitution && matchesStatus;
+  });
+
   const StatCard = ({ title, value, icon, color, description }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
@@ -96,7 +118,8 @@ const SuperAdminDashboard = () => {
       password: '',
       first_name: '',
       last_name: '',
-      role: 'alumni'
+      role: 'alumni',
+      institution_id: ''
     });
     const [creating, setCreating] = useState(false);
 
@@ -202,6 +225,33 @@ const SuperAdminDashboard = () => {
               <option value="super_admin">Super Admin</option>
             </select>
             
+            {/* Institution Selection - required for alumni and students */}
+            {(formData.role === 'alumni' || formData.role === 'student') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Institution *
+                </label>
+                <select
+                  value={formData.institution_id}
+                  onChange={(e) => setFormData({...formData, institution_id: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Select Institution</option>
+                  {institutions.map((institution) => (
+                    <option key={institution.id} value={institution.id}>
+                      {institution.name}
+                    </option>
+                  ))}
+                </select>
+                {institutions.length === 0 && (
+                  <p className="text-sm text-orange-600 mt-1">
+                    ⚠️ No institutions available. Please add an institution first.
+                  </p>
+                )}
+              </div>
+            )}
+            
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
@@ -216,6 +266,142 @@ const SuperAdminDashboard = () => {
                 className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {creating ? 'Creating...' : 'Create User'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const CreateInstitutionModal = () => {
+    const [formData, setFormData] = useState({
+      name: '',
+      type: 'University',
+      location: '',
+      website: '',
+      description: ''
+    });
+    const [creating, setCreating] = useState(false);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setCreating(true);
+      
+      try {
+        const data = await apiCall('/api/super-admin/create-institution', {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        });
+        
+        if (data.success) {
+          alert('Institution created successfully!');
+          setShowCreateInstitutionModal(false);
+          fetchInstitutions(); // Refresh institutions list
+          setFormData({
+            name: '',
+            type: 'University',
+            location: '',
+            website: '',
+            description: ''
+          });
+        } else {
+          alert(data.error || 'Failed to create institution');
+        }
+      } catch (error) {
+        alert('Error creating institution: ' + error.message);
+      }
+      setCreating(false);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Create New Institution</h3>
+            <button
+              onClick={() => setShowCreateInstitutionModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Institution Name *</label>
+              <input
+                type="text"
+                placeholder="Enter institution name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Institution Type *</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="University">University</option>
+                <option value="College">College</option>
+                <option value="Institute">Institute</option>
+                <option value="School">School</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
+              <input
+                type="text"
+                placeholder="City, State/Country"
+                value={formData.location}
+                onChange={(e) => setFormData({...formData, location: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+              <input
+                type="url"
+                placeholder="https://example.edu"
+                value={formData.website}
+                onChange={(e) => setFormData({...formData, website: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                placeholder="Brief description about the institution"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowCreateInstitutionModal(false)}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={creating}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {creating ? 'Creating...' : 'Create Institution'}
               </button>
             </div>
           </form>
@@ -255,7 +441,7 @@ const SuperAdminDashboard = () => {
           />
           <TabButton
             id="users"
-            label="User Management"
+            label="All Users"
             isActive={activeTab === 'users'}
             onClick={setActiveTab}
           />
@@ -367,11 +553,11 @@ const SuperAdminDashboard = () => {
           </div>
         )}
 
-        {/* Users Tab */}
+        {/* All Users Tab */}
         {activeTab === 'users' && (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">User Management</h2>
+              <h2 className="text-xl font-bold text-gray-900">All Users</h2>
               <button
                 onClick={() => setShowCreateUserModal(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -379,10 +565,108 @@ const SuperAdminDashboard = () => {
                 Create User
               </button>
             </div>
+            
+            {/* Search and Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, username..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                {/* Role Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="admin">Admin</option>
+                    <option value="alumni">Alumni</option>
+                    <option value="student">Student</option>
+                  </select>
+                </div>
+                
+                {/* Institution Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Institution</label>
+                  <select
+                    value={institutionFilter}
+                    onChange={(e) => setInstitutionFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Institutions</option>
+                    {institutions.map((institution) => (
+                      <option key={institution.id} value={institution.id}>
+                        {institution.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Clear Filters Button */}
+              {(searchTerm || roleFilter || institutionFilter || statusFilter) && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setRoleFilter('');
+                      setInstitutionFilter('');
+                      setStatusFilter('');
+                    }}
+                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
 
+            {/* Results Count */}
+            <div className="mb-4 text-sm text-gray-600">
+              Showing {filteredUsers.length} of {users.length} users
+              {(searchTerm || roleFilter || institutionFilter || statusFilter) && (
+                <span className="text-blue-600 font-medium"> (filtered)</span>
+              )}
+            </div>
+            
             {loading ? (
               <div className="flex justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+                <div className="text-4xl mb-4">🔍</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Users Found</h3>
+                <p className="text-gray-600">
+                  {users.length === 0 ? 'No users in the system yet.' : 'Try adjusting your search or filters.'}
+                </p>
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -392,13 +676,14 @@ const SuperAdminDashboard = () => {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institution</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {users.map((user) => (
+                      {filteredUsers.map((user) => (
                         <tr key={user.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
@@ -410,6 +695,16 @@ const SuperAdminDashboard = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {user.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {user.institution_name ? (
+                              <div>
+                                <div className="font-medium">{user.institution_name}</div>
+                                <div className="text-gray-500 text-xs">{user.institution_type}</div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">No institution</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -446,7 +741,10 @@ const SuperAdminDashboard = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Institution Management</h2>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+              <button 
+                onClick={() => setShowCreateInstitutionModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
                 Add Institution
               </button>
             </div>
@@ -505,6 +803,9 @@ const SuperAdminDashboard = () => {
 
       {/* Create User Modal */}
       {showCreateUserModal && <CreateUserModal />}
+      
+      {/* Create Institution Modal */}
+      {showCreateInstitutionModal && <CreateInstitutionModal />}
     </div>
   );
 };

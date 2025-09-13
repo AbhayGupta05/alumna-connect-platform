@@ -484,7 +484,11 @@ def get_all_users():
                     'last_name': user.last_name,
                     'role': user.role.value,
                     'status': user.status.value,
-                    'created_at': user.created_at.isoformat() if user.created_at else None
+                    'created_at': user.created_at.isoformat() if user.created_at else None,
+                    # Add sample institution data - later this will be from database relationships
+                    'institution_id': 1 if user.role.value in ['alumni', 'student'] else None,
+                    'institution_name': 'Indian Institute of Technology Delhi' if user.role.value in ['alumni', 'student'] else None,
+                    'institution_type': 'University' if user.role.value in ['alumni', 'student'] else None
                 } for user in users.items],
                 'pagination': {
                     'page': page,
@@ -514,6 +518,10 @@ def create_user():
         for field in required_fields:
             if not data.get(field):
                 return {'success': False, 'error': f'{field} is required'}, 400
+        
+        # Check if institution is required for alumni and students
+        if data.get('role') in ['alumni', 'student'] and not data.get('institution_id'):
+            return {'success': False, 'error': 'Institution is required for alumni and students'}, 400
         
         with app.app_context():
             # Check if user already exists
@@ -561,31 +569,80 @@ def create_user():
 def get_institutions():
     """Get all institutions"""
     try:
+        # For now, return sample data. Later this will be from the database
         institutions = [
             {
                 'id': 1,
-                'name': 'Sample Institution 1',
+                'name': 'Indian Institute of Technology Delhi',
                 'type': 'University',
-                'location': 'New Delhi',
+                'location': 'New Delhi, India',
+                'website': 'https://home.iitd.ac.in/',
+                'description': 'Premier engineering and technology institute',
                 'status': 'active',
-                'admin_count': 2,
-                'student_count': 150,
-                'alumni_count': 500
+                'admin_count': 3,
+                'student_count': 250,
+                'alumni_count': 1200,
+                'created_at': '2024-01-01T00:00:00'
             },
             {
                 'id': 2,
-                'name': 'Sample Institution 2', 
-                'type': 'College',
-                'location': 'Mumbai',
+                'name': 'University of Mumbai', 
+                'type': 'University',
+                'location': 'Mumbai, India',
+                'website': 'https://mu.ac.in/',
+                'description': 'Leading public university in Maharashtra',
                 'status': 'active',
-                'admin_count': 1,
-                'student_count': 80,
-                'alumni_count': 200
+                'admin_count': 2,
+                'student_count': 180,
+                'alumni_count': 800,
+                'created_at': '2024-01-15T00:00:00'
             }
         ]
         return {'success': True, 'institutions': institutions}
     except Exception as e:
+        import traceback
+        print(f"Get institutions error: {e}")
+        traceback.print_exc()
         return {'success': False, 'error': 'Failed to fetch institutions'}, 500
+
+@app.route('/api/super-admin/create-institution', methods=['POST'])
+@require_super_admin()
+def create_institution():
+    """Create a new institution (super admin only)"""
+    try:
+        data = request.get_json()
+        
+        required_fields = ['name', 'type', 'location']
+        for field in required_fields:
+            if not data.get(field):
+                return {'success': False, 'error': f'{field} is required'}, 400
+        
+        # For now, just return success. Later this will save to database
+        institution_data = {
+            'id': len(institutions) + 3,  # Simple ID generation for demo
+            'name': data['name'],
+            'type': data['type'],
+            'location': data['location'],
+            'website': data.get('website', ''),
+            'description': data.get('description', ''),
+            'status': 'active',
+            'admin_count': 0,
+            'student_count': 0,
+            'alumni_count': 0,
+            'created_at': '2024-12-13T00:00:00'
+        }
+        
+        return {
+            'success': True,
+            'message': 'Institution created successfully',
+            'institution': institution_data
+        }
+            
+    except Exception as e:
+        import traceback
+        print(f"Create institution error: {e}")
+        traceback.print_exc()
+        return {'success': False, 'error': 'Failed to create institution'}, 500
 def get_colleges_simple():
     """Simple colleges endpoint that doesn't require database"""
     colleges = [
